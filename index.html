@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="tg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Луғат</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        header {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+            border-radius: 5px;
+        }
+        input, button {
+            margin: 5px;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+        li {
+            margin: 5px 0;
+            background: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+        #quiz-section {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 5px;
+        }
+        #admin-panel {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 5px;
+        }
+        h2 {
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Луғати англисӣ-русӣ-тоҷикӣ</h1>
+    </header>
+    <div id="auth">
+        <input type="text" id="username" placeholder="Логин" required>
+        <input type="password" id="password" placeholder="Парол" required>
+        <button onclick="registerUser()">Қайдгирӣ</button>
+        <button onclick="loginUser()">Воридшавӣ</button>
+    </div>
+    <div id="app" style="display:none;">
+        <p>Луғатҳо: <span id="wordCount">0</span></p>
+        <p>Борҳо истифода шудааст: <span id="usageCount">0</span></p>
+        <p>Ҷавобҳои дуруст: <span id="correctCount">0</span></p>
+        <p>Ҷавобҳои нодуруст: <span id="wrongCount">0</span></p>
+        <h2>Луғат</h2>
+        <ul id="dictionaryList"></ul>
+        <button onclick="startQuiz()">Санҷиш</button>
+        <button onclick="logout()">Баромадан</button>
+        <button onclick="clearCookies()">Тоза кардани кукиҳо</button>
+        <div id="quiz-section">
+            <p id="quiz-question"></p>
+            <input type="text" id="quiz-answer" placeholder="Ҷавоб">
+            <button onclick="checkAnswer()">Ҷавоб</button>
+        </div>
+    </div>
+    <div id="admin-panel">
+        <h2>Панели Админ</h2>
+        <h3>Истифодабарандагон</h3>
+        <ul id="userList"></ul>
+        <h3>Илова кардани Луғат</h3>
+        <input type="text" id="english" placeholder="Англисӣ" required>
+        <input type="text" id="russian" placeholder="Русӣ" required>
+        <input type="text" id="tajik" placeholder="Тоҷикӣ" required>
+        <button onclick="addWord()">Илова кардан</button>
+        <h3>Нест кардани Луғат</h3>
+        <input type="text" id="removeWord" placeholder="Англисӣ барои нест кардан" required>
+        <button onclick="removeWord()">Нест кардан</button>
+        <h3>Тоза кардани Истифодабарандагон</h3>
+        <button onclick="clearUsers()">Тоза кардани истифодабарандагон</button>
+        <h3>Иловаи Админ</h3>
+        <input type="text" id="newAdminUsername" placeholder="Логини админ" required>
+        <input type="password" id="newAdminPassword" placeholder="Пароли админ" required>
+        <button onclick="addAdmin()">Илова кардан</button>
+    </div>
+    <script>
+        let users = JSON.parse(localStorage.getItem('users')) || {};
+        let admins = JSON.parse(localStorage.getItem('admins')) || { "admin": "admin123" }; // Логини стандартии админ
+        let currentUser = localStorage.getItem('currentUser');
+        let dictionary = JSON.parse(localStorage.getItem('dictionary')) || [];
+
+        if (currentUser) {
+            document.getElementById('auth').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            if (admins[currentUser]) {
+                document.getElementById('admin-panel').style.display = 'block';
+                displayUsers();
+            }
+            displayDictionary();
+            updateStats();
+        }
+
+        function registerUser() {
+            let username = document.getElementById('username').value;
+            let password = document.getElementById('password').value;
+            if (!users[username]) {
+                users[username] = { password, correct: 0, wrong: 0 };
+                localStorage.setItem('users', JSON.stringify(users));
+                alert('Қайдгирӣ муваффақ шуд!');
+            } else {
+                alert('Ин логин аллакай мавҷуд аст!');
+            }
+        }
+
+        function loginUser() {
+            let username = document.getElementById('username').value;
+            let password = document.getElementById('password').value;
+            if (users[username] && users[username].password === password) {
+                currentUser = username;
+                localStorage.setItem('currentUser', username);
+                document.getElementById('auth').style.display = 'none';
+                document.getElementById('app').style.display = 'block';
+                if (admins[username]) {
+                    document.getElementById('admin-panel').style.display = 'block';
+                    displayUsers();
+                }
+                displayDictionary();
+                updateStats();
+            } else {
+                alert('Логин ё парол нодуруст аст!');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('currentUser');
+            location.reload();
+        }
+
+        function addWord() {
+            if (!admins[currentUser]) {
+                alert('Фақат админ метавонад луғат илова кунад!');
+                return;
+            }
+            const english = document.getElementById('english').value.trim();
+            const russian = document.getElementById('russian').value.trim();
+            const tajik = document.getElementById('tajik').value.trim();
+            if (english && russian && tajik) {
+                dictionary.push({ english, russian, tajik });
+                localStorage.setItem('dictionary', JSON.stringify(dictionary));
+                displayDictionary();
+            } else {
+                alert('Лутфан ҳамаи майдонҳоро пур кунед!');
+            }
+        }
+
+        function removeWord() {
+            if (!admins[currentUser]) {
+                alert('Фақат админ метавонад луғатро нест кунад!');
+                return;
+            }
+            const wordToRemove = document.getElementById('removeWord').value.trim();
+            dictionary = dictionary.filter(word => word.english.toLowerCase() !== wordToRemove.toLowerCase());
+            localStorage.setItem('dictionary', JSON.stringify(dictionary));
+            displayDictionary();
+            alert('Луғат нест карда шуд!');
+        }
+
+        function clearUsers() {
+            if (!admins[currentUser]) {
+                alert('Фақат админ метавонад истифодабарандагонро тоза кунад!');
+                return;
+            }
+            users = {};
+            localStorage.setItem('users', JSON.stringify(users));
+            displayUsers();
+            alert('Ҳама истифодабарандагон тоза карда шуданд!');
+        }
+
+        function displayDictionary() {
+            document.getElementById('dictionaryList').innerHTML = dictionary.map((word) => 
+                `<li>${word.english} - ${word.russian} - ${word.tajik}</li>`
+            ).join('');
+            document.getElementById('wordCount').textContent = dictionary.length;
+        }
+
+        function startQuiz() {
+            document.getElementById('quiz-section').style.display = 'block';
+            const randomIndex = Math.floor(Math.random() * dictionary.length);
+            document.getElementById('quiz-question').textContent = `Тарҷумаи "${dictionary[randomIndex].tajik}" чист?`;
+            document.getElementById('quiz-answer').dataset.correctAnswer = dictionary[randomIndex].english;
+        }
+
+        function checkAnswer() {
+            const answer = document.getElementById('quiz-answer').value.toLowerCase();
+            const correctAnswer = document.getElementById('quiz-answer').dataset.correctAnswer;
+            if (answer === correctAnswer) {
+                users[currentUser].correct++;
+                alert('Дуруст! ✅');
+            } else {
+                users[currentUser].wrong++;
+                alert('Нодуруст ❌');
+            }
+            localStorage.setItem('users', JSON.stringify(users));
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById('correctCount').textContent = users[currentUser]?.correct || 0;
+            document.getElementById('wrongCount').textContent = users[currentUser]?.wrong || 0;
+            document.getElementById('usageCount').textContent = Object.keys(users).length;
+        }
+
+        function displayUsers() {
+            document.getElementById('userList').innerHTML = Object.keys(users).map((user) => 
+                `<li>${user} - Парол: ${users[user].password} - Ҷавобҳои дуруст: ${users[user].correct} - Ҷавобҳои нодуруст: ${users[user].wrong}</li>`
+            ).join('');
+        }
+
+        function addAdmin() {
+            const newAdminUsername = document.getElementById('newAdminUsername').value.trim();
+            const newAdminPassword = document.getElementById('newAdminPassword').value.trim();
+            if (newAdminUsername && newAdminPassword) {
+                if (!admins[newAdminUsername]) {
+                    admins[newAdminUsername] = newAdminPassword;
+                    localStorage.setItem('admins', JSON.stringify(admins));
+                    alert('Админ илова шуд!');
+                } else {
+                    alert('Ин логин аллакай мавҷуд аст!');
+                }
+            } else {
+                alert('Лутфан ҳамаи майдонҳоро пур кунед!');
+            }
+        }
+
+        function clearCookies() {
+            localStorage.clear();
+            location.reload();
+        }
+    </script>
+</body>
+</html>

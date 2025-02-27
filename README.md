@@ -1,0 +1,2 @@
+# entj
+english russian tajiki

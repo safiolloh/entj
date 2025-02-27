@@ -1,2 +1,2 @@
 # entj
-english russian tajiki
+english russian tajik
